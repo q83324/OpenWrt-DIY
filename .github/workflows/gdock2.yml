@@ -23,8 +23,9 @@ on:
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
-  DL_URL: https://rexyu:${{ secrets.ACCESS_TOKEN}}@github.com/openwrtrouter/openwrtrouter.github.io
+  IO_URL: https://rexyu:${{ secrets.ACCESS_TOKEN}}@github.com/openwrtrouter/openwrtrouter.github.io
   DL_BRANCH: download
+  BUILD_BRANCH: build
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: config/Qualcomm/gdock.config
   DIY_P1_SH: scripts/diy-part1.sh
@@ -66,7 +67,7 @@ jobs:
     - name: Clone download
       working-directory: /workdir
       run: |
-        git clone --depth 1 ${{ env.REPO_URL }} -b ${{ env.DL_BRANCH }} dl
+        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.DL_BRANCH }} dl
         ln -sf /workdir/dl $GITHUB_WORKSPACE/openwrt/dl
         
         
@@ -141,7 +142,27 @@ jobs:
       with:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
-        
+
+    - name: Clone build
+      run: git clone --depth 1 $IO_URL -b $BUILD_BRANCH build
+      
+    - name: Push build
+      run: |
+        DISTRIB_REVISION=`grep 'DISTRIB_REVISION=' ./openwrt/package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}'`
+        cd build 
+        echo $DISTRIB_REVISION > VERSION
+        BUILD_PATH=${PWD}
+        cd ../openwrt/bin/targets/**/**/
+        cp -rf ../../../../.config ./${{ env.BUILD_NAME }}.config
+        cd $BUILD_PATH
+        cp -rf ../openwrt/bin/* ./
+        git config --local user.email "yuwenzhen@qq.com"
+        git config --local user.name "RexYu"
+        git pull
+        git add ./
+        git commit -m 'commit ${{ env.BUILD_NAME }} '$DISTRIB_REVISION
+        git push
+
     - name: Push download
       working-directory: /workdir
       run: |
