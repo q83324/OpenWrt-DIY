@@ -9,7 +9,7 @@
 # Description: Build OpenWrt using GitHub Actions
 #
 
-name: Build G-Dock OpenWrt
+name: Build G-Dock DL OpenWrt
 
 on:
   repository_dispatch:
