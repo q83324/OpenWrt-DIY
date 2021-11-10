@@ -166,7 +166,7 @@ jobs:
         git push
 
     - name: Push download
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_DOWNLOAD == 'true'
+      if: env.UPLOAD_DOWNLOAD == 'true'
       working-directory: /workdir
       run: |
         cd dl 
