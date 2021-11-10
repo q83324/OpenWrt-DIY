@@ -30,7 +30,8 @@ env:
   CONFIG_FILE: config/Qualcomm/gdock.config
   DIY_P1_SH: scripts/diy-part1.sh
   DIY_P2_SH: scripts/diy-part2.sh
-  UPLOAD_BIN_DIR: false
+  UPLOAD_BIN_DIR: true
+  UPLOAD_DOWNLOAD: true
   UPLOAD_FIRMWARE: true
   UPLOAD_COWTRANSFER: true
   UPLOAD_WETRANSFER: true
@@ -142,11 +143,13 @@ jobs:
       with:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
-
+      
     - name: Clone build
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
       run: git clone --depth 1 $IO_URL -b $BUILD_BRANCH build
       
     - name: Push build
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
       run: |
         DISTRIB_REVISION=`grep 'DISTRIB_REVISION=' ./openwrt/package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}'`
         cd build 
@@ -164,6 +167,7 @@ jobs:
         git push
 
     - name: Push download
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_DOWNLOAD == 'true'
       working-directory: /workdir
       run: |
         cd dl 
