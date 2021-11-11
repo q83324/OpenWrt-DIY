@@ -21,7 +21,7 @@ on:
       staging_dir:
         description: 'staging_dir to Actions 0:disable,1:use not upload,2:use and upload'
         required: false
-        default: '0'
+        default: '2'
 
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
@@ -135,12 +135,25 @@ jobs:
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
+        
+    - name: Push download
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      working-directory: /workdir
+      run: |
+        cd dl 
+        git config --local user.email "yuwenzhen@qq.com"
+        git config --local user.name "RexYu"
+        git pull
+        git add ./
+        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git push
+        
     - name: Compile the firmware
       id: compile
       run: |
         cd openwrt
         echo -e "$(nproc) thread compile"
-        make -j$(nproc)
+        make -j1 V=s
         echo "::set-output name=status::success"
     - name: Check space usage
       if: (!cancelled())
