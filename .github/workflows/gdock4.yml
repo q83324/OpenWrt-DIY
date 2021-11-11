@@ -199,7 +199,7 @@ jobs:
         cp -rf ../openwrt/bin/* ./
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
-        find ./ -size +100M -exec rm {} \;
+        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
         git pull
         git add ./
         git commit -m 'commit build ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
@@ -211,7 +211,7 @@ jobs:
         cd dl 
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
-        find ./ -size +100M -exec rm {} \;
+        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
         git pull
         git add ./
         git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
@@ -225,7 +225,9 @@ jobs:
         cd ${{ env.DEVICE_NAME }}/
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
-        find ./ -size +100M -exec rm {} \;
+        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
+        free
+        git config --global http.postBuffer 7240000000
         git pull
         echo  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }} > VERSION
         git add ./
