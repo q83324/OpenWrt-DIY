@@ -30,7 +30,7 @@ env:
   IO_URL: https://rexyu:${{ secrets.ACCESS_TOKEN}}@github.com/openwrtrouter/openwrtrouter.github.io
   DL_BRANCH: download
   BUILD_BRANCH: build
-  STAGEING_BRANCH: stageing
+  STAGEING_BRANCH: staging_dir
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: config/Qualcomm/gdock.config
   DIY_P1_SH: scripts/diy-part1.sh
@@ -67,31 +67,18 @@ jobs:
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
         grep 'DISTRIB_REVISION=' $GITHUB_WORKSPACE/openwrt/package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}' >DISTRIB_REVISION
         [ -s DISTRIB_REVISION ] && echo "DISTRIB_REVISION= $(cat DISTRIB_REVISION)" >> $GITHUB_ENV
-        
-    - name: Clone download
-      working-directory: /workdir
-      run: |
-        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.DL_BRANCH }} dl
-        ln -sf /workdir/dl $GITHUB_WORKSPACE/openwrt/dl
-        
+      
+      
     - name: Clone staging_dir
       working-directory: /workdir
       if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2'
       run: |
-        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.STAGEING_BRANCH }} staging_dir
+        git init staging_dir && cd staging_dir
+        git remote add -f origin ${{ env.IO_URL }}
+        git config core.sparsecheckout true
+        echo "devops" >> .git/info/sparse-checkout
+        git pull origin  ${{ env.STAGEING_BRANCH }} 
         ln -sf /workdir/staging_dir $GITHUB_WORKSPACE/openwrt/staging_dir
-        
-    - name: Push download
-      working-directory: /workdir
-      run: |
-        cd dl 
-        git config --local user.email "yuwenzhen@qq.com"
-        git config --local user.name "RexYu"
-        git pull
-        echo  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }} > VERSION
-        git add ./
-        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push
         
     - name: Push staging_dir
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
