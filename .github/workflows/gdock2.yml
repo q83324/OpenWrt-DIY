@@ -19,6 +19,10 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
+      staging_dir:
+        description: 'staging_dir to Actions 0:disable,1:use not upload,2:use and upload'
+        required: false
+        default: '0'
 
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
@@ -26,6 +30,7 @@ env:
   IO_URL: https://rexyu:${{ secrets.ACCESS_TOKEN}}@github.com/openwrtrouter/openwrtrouter.github.io
   DL_BRANCH: download
   BUILD_BRANCH: build
+  STAGEING_BRANCH: stageing_gdock
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: config/Qualcomm/gdock2.config
   DIY_P1_SH: scripts/diy-part1.sh
@@ -70,6 +75,13 @@ jobs:
       run: |
         git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.DL_BRANCH }} dl
         ln -sf /workdir/dl $GITHUB_WORKSPACE/openwrt/dl
+        
+    - name: Clone staging_dir
+      working-directory: /workdir
+      if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  != '2'
+      run: |
+        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.STAGEING_BRANCH }} staging_dir
+        ln -sf /workdir/staging_dir $GITHUB_WORKSPACE/openwrt/staging_dir
         
         
     - name: Load custom feeds
@@ -178,6 +190,17 @@ jobs:
         git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
 
+    - name: Push staging_dir
+      working-directory: /workdir
+      if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  != '2'
+      run: |
+        cd staging_dir 
+        git config --local user.email "yuwenzhen@qq.com"
+        git config --local user.name "RexYu"
+        git pull
+        git add ./
+        git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git push
 
     - name: Upload firmware to cowtransfer
       id: cowtransfer
