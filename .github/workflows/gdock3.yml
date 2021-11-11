@@ -188,9 +188,9 @@ jobs:
         git add ./
         git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
+
     - name: Push staging_dir
       working-directory: /workdir
-      if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2'
       run: |
         cd staging_dir 
         git config --local user.email "yuwenzhen@qq.com"
@@ -199,6 +199,7 @@ jobs:
         git add ./
         git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
+
     - name: Upload firmware to cowtransfer
       id: cowtransfer
       if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
