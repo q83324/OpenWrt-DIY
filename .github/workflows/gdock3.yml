@@ -178,6 +178,7 @@ jobs:
         git add ./
         git commit -m 'commit build ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
+
     - name: Push download
       working-directory: /workdir
       run: |
@@ -190,8 +191,8 @@ jobs:
         git push
 
     - name: Push staging_dir
+      if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2'
       working-directory: /workdir
-      if:  !cancelled()
       run: |
         cd staging_dir 
         git config --local user.email "yuwenzhen@qq.com"
