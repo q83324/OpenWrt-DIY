@@ -117,3 +117,7 @@ popd
 # Change default shell to zsh
 sed -i 's/\/bin\/ash/\/usr\/bin\/zsh/g' package/base-files/files/etc/passwd
 
+
+# Modify zerotier version
+sed -i 's/1.6.6/1.8.2/g' packages/net/zerotier/Makefile
+sed -i 's/6c95ffca4a64bf948abbf3e550a0c4881b17cf45ff2f55e2a389d095f9be81a5/e5695df264cf5fe45582c61976bcfbdfa49ff491e91d5b520acd1e14a057fd2c/g' packages/net/zerotier/Makefile
