@@ -191,7 +191,7 @@ jobs:
 
     - name: Push staging_dir
       working-directory: /workdir
-      if  !cancelled()
+      if:  !cancelled()
       run: |
         cd staging_dir 
         git config --local user.email "yuwenzhen@qq.com"
