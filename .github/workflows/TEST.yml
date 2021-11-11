@@ -79,12 +79,10 @@ jobs:
       working-directory: /workdir
       if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2'
       run: |
-        git init staging_dir && cd staging_dir
-        git remote add -f origin/${{ env.STAGEING_BRANCH }}  ${{ env.IO_URL }}
-        git config core.sparsecheckout true
-        echo "devops" >> .git/info/sparse-checkout
-        git pull origin/${{ env.STAGEING_BRANCH }} 
-        ln -sf /workdir/staging_dir $GITHUB_WORKSPACE/openwrt/staging_dir
+        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.STAGEING_BRANCH }} staging_dir
+        touch ${{ env.BUILD_BRANCH }}
+        ln -sf /workdir/staging_dir/${{ env.BUILD_BRANCH }} $GITHUB_WORKSPACE/openwrt/staging_dir
+        ls $GITHUB_WORKSPACE/openwrt/staging_dir
         
     - name: Push staging_dir
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
