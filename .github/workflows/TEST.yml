@@ -30,7 +30,7 @@ env:
   IO_URL: https://rexyu:${{ secrets.ACCESS_TOKEN}}@github.com/openwrtrouter/openwrtrouter.github.io
   DL_BRANCH: download
   BUILD_BRANCH: build
-  STAGEING_BRANCH: stageing_gdock
+  STAGEING_BRANCH: stageing
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: config/Qualcomm/gdock.config
   DIY_P1_SH: scripts/diy-part1.sh
