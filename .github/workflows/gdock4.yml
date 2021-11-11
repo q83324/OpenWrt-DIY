@@ -67,6 +67,7 @@ jobs:
     - name: Clone source code
       working-directory: /workdir
       run: |
+        free
         df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
@@ -222,7 +223,6 @@ jobs:
         cd staging_dir/
         df -hT $PWD
         cd ${{ env.DEVICE_NAME }}/
-        git config --global http.postBuffer 102400000000
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
         find ./ -size +100M -exec rm {} \;
