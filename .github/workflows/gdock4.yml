@@ -85,11 +85,11 @@ jobs:
         chmod +x $DIY_P1_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P1_SH
-    - name: Update feeds
-      run: cd openwrt && ./scripts/feeds update -a
+   # - name: Update feeds
+   #  run: cd openwrt && ./scripts/feeds update -a
 
-    - name: Install feeds
-      run: cd openwrt && ./scripts/feeds install -a
+   # - name: Install feeds
+   #   run: cd openwrt && ./scripts/feeds install -a
 
     - name: Load custom configuration
       run: |
@@ -127,15 +127,6 @@ jobs:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
-    - name: Download package
-      id: package
-      run: |
-        cd openwrt
-        ls dl/
-        make defconfig
-        make download -j8
-        find dl -size -1024c -exec ls -l {} \;
-        find dl -size -1024c -exec rm -f {} \;
         
     - name: Push download
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
@@ -148,7 +139,7 @@ jobs:
         git pull
         git add ./
         git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push -f
+        git push
         
     - name: Compile the firmware
       id: compile
