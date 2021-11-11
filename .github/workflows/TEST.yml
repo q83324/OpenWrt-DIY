@@ -80,7 +80,9 @@ jobs:
       if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2'
       run: |
         git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.STAGEING_BRANCH }} staging_dir
-        touch ${{ env.BUILD_BRANCH }}
+        cd staging_dir/
+        if [ ! -d ${{ env.BUILD_BRANCH }} ]; then mkdir ${{ env.BUILD_BRANCH }} fi
+        touch 
         ln -sf /workdir/staging_dir/${{ env.BUILD_BRANCH }} $GITHUB_WORKSPACE/openwrt/staging_dir
         ls $GITHUB_WORKSPACE/openwrt/staging_dir
         
