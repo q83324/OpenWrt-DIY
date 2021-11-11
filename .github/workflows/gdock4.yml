@@ -144,6 +144,7 @@ jobs:
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
         git pull
+        find ./ -size +100M -exec rm {} \;
         git add ./
         git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push -f
@@ -197,6 +198,7 @@ jobs:
         cp -rf ../openwrt/bin/* ./
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
+        find ./ -size +100M -exec rm {} \;
         git pull
         git add ./
         git commit -m 'commit build ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
@@ -208,6 +210,7 @@ jobs:
         cd dl 
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
+        find ./ -size +100M -exec rm {} \;
         git pull
         git add ./
         git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
@@ -222,6 +225,7 @@ jobs:
         git config --global http.postBuffer 102400000000
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
+        find ./ -size +100M -exec rm {} \;
         git pull
         echo  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }} > VERSION
         git add ./
