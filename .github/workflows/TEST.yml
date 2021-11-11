@@ -83,6 +83,7 @@ jobs:
         cd staging_dir/
         if [ ! -d ${{ env.BUILD_BRANCH }} ]; then mkdir ${{ env.BUILD_BRANCH }} 
         fi 
+        git add ${{ env.BUILD_BRANCH }}
         ln -sf /workdir/staging_dir/${{ env.BUILD_BRANCH }} $GITHUB_WORKSPACE/openwrt/staging_dir
         ls $GITHUB_WORKSPACE/openwrt/staging_dir
         
