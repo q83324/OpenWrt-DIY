@@ -114,7 +114,7 @@ jobs:
         if [ ! -d ${{ env.DEVICE_NAME }} ]; then mkdir ${{ env.DEVICE_NAME }} 
         fi 
         git add ${{ env.DEVICE_NAME }}
-        ln -sf /workdir/staging_dir/${{ env.BUILD_BRANCH }} $GITHUB_WORKSPACE/openwrt/staging_dir
+        ln -sf /workdir/staging_dir/${{ env.DEVICE_NAME }} $GITHUB_WORKSPACE/openwrt/staging_dir
         ls $GITHUB_WORKSPACE/openwrt/staging_dir
       
         
