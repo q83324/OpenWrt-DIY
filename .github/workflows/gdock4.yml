@@ -145,7 +145,7 @@ jobs:
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
         git pull
-        find ./ -size +100M -exec rm {} \;
+        find ./**.zip -size +100M -exec rm {} \;
         git add ./
         git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push -f
