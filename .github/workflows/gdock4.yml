@@ -146,7 +146,7 @@ jobs:
         git pull
         git add ./
         git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push
+        git push -f
         
     - name: Compile the firmware
       id: compile
@@ -200,7 +200,7 @@ jobs:
         git pull
         git add ./
         git commit -m 'commit build ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push
+        git push  -f
     - name: Push download
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       working-directory: /workdir
@@ -211,7 +211,7 @@ jobs:
         git pull
         git add ./
         git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push
+        git push  -f
     - name: Push staging_dir
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       working-directory: /workdir
@@ -226,7 +226,7 @@ jobs:
         echo  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }} > VERSION
         git add ./
         git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push
+        git push  -f
     - name: Upload firmware to cowtransfer
       id: cowtransfer
       if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
