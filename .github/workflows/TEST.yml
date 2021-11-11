@@ -74,10 +74,10 @@ jobs:
       if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2'
       run: |
         git init staging_dir && cd staging_dir
-        git remote add -f origin ${{ env.IO_URL }}
+        git remote add -f origin/${{ env.STAGEING_BRANCH }}  ${{ env.IO_URL }}
         git config core.sparsecheckout true
         echo "devops" >> .git/info/sparse-checkout
-        git pull origin  ${{ env.STAGEING_BRANCH }} 
+        git pull origin/${{ env.STAGEING_BRANCH }} 
         ln -sf /workdir/staging_dir $GITHUB_WORKSPACE/openwrt/staging_dir
         
     - name: Push staging_dir
