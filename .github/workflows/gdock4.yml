@@ -189,6 +189,7 @@ jobs:
         git commit -m 'commit build ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
     - name: Push download
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       working-directory: /workdir
       run: |
         cd dl 
