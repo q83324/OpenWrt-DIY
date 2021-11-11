@@ -119,11 +119,6 @@ jobs:
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
-        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
-        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
-        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-        echo "DISTRIB_REVISION=`grep 'DISTRIB_REVISION=' ./openwrt/package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}'`" >> $GITHUB_ENV
-        echo ${{ env.DEVICE_NAME }}${{env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
     - name: Compile the firmware
       id: compile
       run: |
@@ -134,7 +129,8 @@ jobs:
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-        echo "DISTRIB_REVISION=`grep 'DISTRIB_REVISION=' ./openwrt/package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}'`" >> $GITHUB_ENV
+        grep 'DISTRIB_REVISION=' ./openwrt/package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}' >DISTRIB_REVISION
+        [ -s DISTRIB_REVISION ] && echo "DISTRIB_REVISION= $(cat DISTRIB_REVISION)" >> $GITHUB_ENV
     - name: Check space usage
       if: (!cancelled())
       run: df -hT
@@ -143,7 +139,7 @@ jobs:
       uses: actions/upload-artifact@main
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
       with:
-        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
+        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
         path: openwrt/bin
 
     - name: Organize files
@@ -158,7 +154,7 @@ jobs:
       uses: actions/upload-artifact@main
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
-        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
       
     - name: Clone build
@@ -168,9 +164,8 @@ jobs:
     - name: Push build
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
       run: |
-        DISTRIB_REVISION=`grep 'DISTRIB_REVISION=' ./openwrt/package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}'`
         cd build 
-        echo $DISTRIB_REVISION > VERSION
+        echo ${{ env.DISTRIB_REVISION }} > VERSION
         BUILD_PATH=${PWD}
         cd ../openwrt/bin/targets/**/**/
         cp -rf ../../../../.config ./${{ env.BUILD_NAME }}.config
@@ -180,7 +175,7 @@ jobs:
         git config --local user.name "RexYu"
         git pull
         git add ./
-        git commit -m 'commit build ${{ env.DEVICE_NAME }}${{env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git commit -m 'commit build ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
 
     - name: Push download
@@ -191,7 +186,7 @@ jobs:
         git config --local user.name "RexYu"
         git pull
         git add ./
-        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
 
     - name: Push staging_dir
@@ -203,7 +198,7 @@ jobs:
         git config --local user.name "RexYu"
         git pull
         git add ./
-        git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
 
     - name: Upload firmware to cowtransfer
