@@ -60,7 +60,7 @@ jobs:
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         grep 'DISTRIB_REVISION=' ./openwrt/package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}' >DISTRIB_REVISION
-        [ -s DISTRIB_REVISION ] && echo "DISTRIB_REVISION=_$(cat DISTRIB_REVISION)" >> $DISTRIB_REVISION
+        [ -s DISTRIB_REVISION ] && echo "DISTRIB_REVISION=_$(cat DISTRIB_REVISION)" >> $GITHUB_ENV
        
         echo ${{env.DISTRIB_REVISION }}
         
