@@ -80,7 +80,7 @@ jobs:
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       working-directory: /workdir
       run: |
-        cd dl 
+        cd download
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
         #find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
