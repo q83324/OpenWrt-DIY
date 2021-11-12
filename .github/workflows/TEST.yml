@@ -74,6 +74,7 @@ jobs:
         cd openwrt/dl
         dd if=/dev/zero of=empty${{ env.FILE_DATE }} bs=1M count=0 seek=120  
         dd if=/dev/zero of=empty2${{ env.FILE_DATE }} bs=1M count=0 seek=1 
+        cd ../
         ls -l dl/
         
     - name: Push download
