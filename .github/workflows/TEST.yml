@@ -1,4 +1,3 @@
-  
 #
 # Copyright (c) 2019-2020 P3TERX <https://p3terx.com>
 #
@@ -9,7 +8,7 @@
 # Description: Build OpenWrt using GitHub Actions
 #
 
-name: Build -TEST- 
+name: Build -TEST-
 
 on:
   repository_dispatch:
@@ -22,19 +21,19 @@ on:
       staging_dir:
         description: 'staging_dir to Actions 0:disable,1:use not upload,2:use and upload'
         required: false
-        default: '0'
+        default: '2'
 
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
-  IO_URL: https://rexyu:${{ secrets.ACCESS_TOKEN}}@github.com/openwrtrouter/openwrtrouter.github.io
-  DL_BRANCH: download
+  IO_URL: https://wzlcm:${{ secrets.ACCESS_TOKEN}}@github.com/wzlcm/wzlcm.github.io.git
+  DL_BRANCH: test
   BUILD_BRANCH: build
   STAGEING_BRANCH: staging_dir
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: config/Qualcomm/gdock.config
-  DIY_P1_SH: scripts/diy-part1.sh
-  DIY_P2_SH: scripts/diy-part2.sh
+  DIY_P1_SH: scripts/diy-part1-1.sh
+  DIY_P2_SH: scripts/diy-part2-1.sh
   UPLOAD_BIN_DIR: true
   UPLOAD_DOWNLOAD: true
   UPLOAD_FIRMWARE: true
@@ -45,7 +44,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
     - name: Checkout
@@ -55,18 +54,78 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
+        sudo -E apt-get -qq update
+        sudo -E apt-get -qq install $(curl -fsSL git.io/depends-ubuntu-2004)
+        sudo -E apt-get -qq autoremove --purge
+        sudo -E apt-get -qq clean
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
+
+
+    - name: pull lede
+      if: steps.cache-lede.outputs.cache-hit == 'true'
+      run: |
+        cp -rf lede2 lede
+        
     - name: Clone source code
       working-directory: /workdir
       run: |
+        free
         df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+        
+
+    - name: Load custom feeds
+      run: |
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P1_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P1_SH
+    - name: Update feeds
+      run: cd openwrt && ./scripts/feeds update -a
+
+    - name: Load custom configuration
+      run: |
+        [ -e files ] && mv files openwrt/files
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        cat config/Qualcomm/Qualcomm-extra2.config >> openwrt/.config
+        chmod +x $DIY_P2_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+        cd $GITHUB_WORKSPACE/openwrt
+        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-        grep 'DISTRIB_REVISION=' $GITHUB_WORKSPACE/openwrt/package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}' >DISTRIB_REVISION
+        grep 'DISTRIB_REVISION=' package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}' >DISTRIB_REVISION
         [ -s DISTRIB_REVISION ] && echo "DISTRIB_REVISION= $(cat DISTRIB_REVISION)" >> $GITHUB_ENV
+        
+                  
+    - name: Cache download
+      id: cache-download
+      uses: actions/cache@v1
+      with:
+        path: lede2
+        key: ${{ env.DEVICE_NAME }}-lede-download
+      
+          
+          
+          
+    - name: Clone staging_dir
+      working-directory: /workdir
+      if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2'
+      run: |
+        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.STAGEING_BRANCH }} staging_dir
+        cd staging_dir/
+        if [ ! -d ${{ env.DEVICE_NAME }} ]; then mkdir ${{ env.DEVICE_NAME }} 
+        fi 
+        git add ${{ env.DEVICE_NAME }}
+        rm -rf /workdir/openwrt/staging_dir/
+        ln -sf /workdir/staging_dir/${{ env.DEVICE_NAME }} /workdir/openwrt/staging_dir
+        ls -l $GITHUB_WORKSPACE/openwrt/staging_dir
+      
+        
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@v1.0.0
       if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
@@ -74,31 +133,120 @@ jobs:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
-      
-    - name: Clone staging_dir
-      working-directory: /workdir
-      if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2'
-      run: |
-        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.STAGEING_BRANCH }} staging_dir
-        cd staging_dir/
-        if [ ! -d ${{ env.BUILD_BRANCH }} ]; then mkdir ${{ env.BUILD_BRANCH }} 
-        fi 
-        git add ${{ env.BUILD_BRANCH }}
-        ln -sf /workdir/staging_dir/${{ env.BUILD_BRANCH }} $GITHUB_WORKSPACE/openwrt/staging_dir
-        ls $GITHUB_WORKSPACE/openwrt/staging_dir
         
+    - name: Download package
+      id: package
+      run: |
+        cd openwrt
+        ls -l dl/
+        make defconfig
+        make download -j8
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
+        
+    - name: Push download
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      working-directory: /workdir
+      run: |
+        cd dl 
+        git config --local user.email "yuwenzhen@qq.com"
+        git config --local user.name "RexYu"
+        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
+        git pull
+        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
+        git add ./
+        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git push
+        
+    - name: Compile the firmware
+      id: compile
+      run: |
+        cd openwrt
+        echo -e "$(nproc) thread compile"
+        make -j1 V=s
+        echo "::set-output name=status::success"
+    - name: Check space usage
+      if: (!cancelled())
+      run: df -hT
+
+    - name: Upload bin directory
+      uses: actions/upload-artifact@main
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      with:
+        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
+        path: openwrt/bin
+
+    - name: Organize files
+      id: organize
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      run: |
+        cd openwrt/bin/targets/*/*
+        rm -rf packages
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        echo "::set-output name=status::success"
+    - name: Upload firmware directory
+      uses: actions/upload-artifact@main
+      if: steps.organize.outputs.status == 'success' && !cancelled()
+      with:
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
+        path: ${{ env.FIRMWARE }}
+      
+    - name: Clone build
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      run: git clone --depth 1 $IO_URL -b $BUILD_BRANCH build
+      
+    - name: Push build
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      run: |
+        cd build 
+        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
+        BUILD_PATH=${PWD}
+        cd ../openwrt/bin/targets/**/**/
+        cp -rf ../../../../.config ./${{ env.BUILD_NAME }}.config
+        cd $BUILD_PATH
+        cp -rf ../openwrt/bin/* ./
+        git config --local user.email "yuwenzhen@qq.com"
+        git config --local user.name "RexYu"
+        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
+        git pull
+        git add ./
+        git commit -m 'commit build ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git push  -f
+    - name: Push download
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      working-directory: /workdir
+      run: |
+        cd dl 
+        git config --local user.email "yuwenzhen@qq.com"
+        git config --local user.name "RexYu"
+        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
+        git pull
+        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
+        git add ./
+        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git push  -f
     - name: Push staging_dir
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       working-directory: /workdir
       run: |
-        cd staging_dir/${{ env.BUILD_BRANCH }}
+        cd staging_dir
+        df -hT $PWD
+        ls -l 
+        echo 'ls package'
+        ls -l ${{ env.DEVICE_NAME }}/
+        echo 'ls package end'
+        
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
+        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
+        free
+        git config --global http.postBuffer 7240000000
         git pull
-        echo  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }} > VERSION
+        echo '2${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > ${{ env.DEVICE_NAME }}/VERSION
         git add ./
         git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
+        
     - name: Upload firmware to cowtransfer
       id: cowtransfer
       if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
@@ -121,8 +269,8 @@ jobs:
       run: |
         echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
         touch release.txt
-        [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
-        [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
+        [ $UPLOAD_COWTRANSFER = true ] && echo "?? [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
+        [ $UPLOAD_WETRANSFER = true ] && echo "?? [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
         echo "::set-output name=status::success"
     - name: Upload firmware to release
       uses: softprops/action-gh-release@v1
