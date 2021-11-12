@@ -74,9 +74,7 @@ jobs:
         chmod +x $DIY_P1_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P1_SH
-    - name: Update feeds
-      run: cd openwrt && ./scripts/feeds update -a
-
+   
     - name: Load custom configuration
       run: |
         [ -e files ] && mv files openwrt/files
@@ -104,8 +102,10 @@ jobs:
 
     - name: ll download
       run: |
+        ls -l
         cd /workdir/openwrt/dl
         echo 'xxx'>> VERSION
+        
         
 
     - name: Remove old Releases
