@@ -26,7 +26,7 @@ on:
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
-  IO_URL: https://rexyu:${{ secrets.ACCESS_TOKEN}}@github.com/openwrtrouter/openwrtrouter.github.io
+  IO_URL: https://wzlcm:${{ secrets.ACCESS_TOKEN}}@github.com/wzlcm/wzlcm.github.io
   DL_BRANCH: download
   BUILD_BRANCH: build
   STAGEING_BRANCH: staging_dir
