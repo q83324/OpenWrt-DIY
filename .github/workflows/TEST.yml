@@ -68,7 +68,7 @@ jobs:
         if [ ! -d ${{ env.DEVICE_NAME }} ]; then mkdir ${{ env.DEVICE_NAME }} 
         fi 
         git add ${{ env.DEVICE_NAME }}
-        rm -rf /workdir/openwrt/staging_dir/
+        rm -rf /workdir/openwrt/dl/
         ln -sf /workdir/download /workdir/openwrt/dl
        
     - name: Download package
