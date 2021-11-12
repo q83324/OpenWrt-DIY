@@ -163,6 +163,8 @@ jobs:
         cd openwrt
         ls -l dl/
         make defconfig
+        echo '.config info'
+        cat .config
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
