@@ -169,7 +169,6 @@ jobs:
       id: package
       run: |
         cd openwrt
-        ls -l dl/
         make defconfig
         echo '.config info'
         cat .config
