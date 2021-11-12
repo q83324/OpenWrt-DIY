@@ -116,7 +116,7 @@ jobs:
         if [ ! -d ${{ env.DEVICE_NAME }} ]; then mkdir ${{ env.DEVICE_NAME }} 
         fi 
         git add ${{ env.DEVICE_NAME }}
-        ln -sf /workdir/staging_dir/${{ env.DEVICE_NAME }} $GITHUB_WORKSPACE/openwrt/staging_dir
+        ln -sf ${{ env.DEVICE_NAME }} /workdir/openwrt/staging_dir
         ls $GITHUB_WORKSPACE/openwrt/staging_dir
       
         
@@ -235,7 +235,24 @@ jobs:
         echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
         git add ./
         git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push  -f
+        git push
+        
+    - name: Push staging_dir2
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      working-directory: /workdir
+      run: |
+        cd staging_dir/
+        df -hT $PWD
+        cd ${{ env.DEVICE_NAME }}/
+        git config --local user.email "yuwenzhen@qq.com"
+        git config --local user.name "RexYu"
+        free
+        git config --global http.postBuffer 7240000000
+        git pull
+        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
+        git add ./
+        git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git push
     - name: Upload firmware to cowtransfer
       id: cowtransfer
       if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
