@@ -64,7 +64,7 @@ jobs:
       working-directory: /workdir
       run: |
         git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.DL_BRANCH }} download
-        cd staging_dir/
+        cd download/
         if [ ! -d ${{ env.DEVICE_NAME }} ]; then mkdir ${{ env.DEVICE_NAME }} 
         fi 
         git add ${{ env.DEVICE_NAME }}
