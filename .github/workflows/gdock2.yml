@@ -18,8 +18,8 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-      staging_dir:
-        description: 'staging_dir to Actions 0:disable,1:use not upload,2:use and upload,3:not use and upload'
+      use_build_cache:
+        description: 'build_cache to Actions 0:disable,1:use not upload,2:use and upload,3:not use and upload'
         required: false
         default: '2'
 
@@ -28,6 +28,7 @@ env:
   REPO_BRANCH: master
   IO_URL: https://wzlcm:${{ secrets.ACCESS_TOKEN}}@github.com/wzlcm/wzlcm.github.io.git
   DL_BRANCH: download
+  BIN_BRANCH: build
   BUILD_BRANCH: build_dir
   STAGEING_BRANCH: staging_dir
   FEEDS_CONF: feeds.conf.default
@@ -113,7 +114,7 @@ jobs:
           
     - name: Clone build_dir
       working-directory: /workdir
-      if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2' || github.event.inputs.staging_dir  == '3'
+      if: github.event.inputs.use_build_cache == '1' || github.event.inputs.use_build_cache  == '2' || github.event.inputs.use_build_cache  == '3'
       run: |
         git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.BUILD_BRANCH }} build_dir
         cd build_dir/
@@ -122,11 +123,10 @@ jobs:
         git add ${{ env.DEVICE_NAME }}
         rm -rf /workdir/openwrt/build_dir/
         ln -sf /workdir/build_dir/${{ env.DEVICE_NAME }} /workdir/openwrt/build_dir
-        ls -l $GITHUB_WORKSPACE/openwrt/build_dir
         
     - name: Clone staging_dir
       working-directory: /workdir
-      if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2' || github.event.inputs.staging_dir  == '3'
+      if: github.event.inputs.use_build_cache == '1' || github.event.inputs.use_build_cache  == '2' || github.event.inputs.use_build_cache  == '3'
       run: |
         git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.STAGEING_BRANCH }} staging_dir
         cd staging_dir/
@@ -135,19 +135,29 @@ jobs:
         git add ${{ env.DEVICE_NAME }}
         rm -rf /workdir/openwrt/staging_dir/
         ln -sf /workdir/staging_dir/${{ env.DEVICE_NAME }} /workdir/openwrt/staging_dir
-        ls -l $GITHUB_WORKSPACE/openwrt/staging_dir
+      
+         
+    - name: Clone build_bin
+      working-directory: /workdir
+      if: github.event.inputs.use_build_cache == '1' || github.event.inputs.use_build_cache  == '2' || github.event.inputs.use_build_cache  == '3'
+      run: |
+        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.BIN_BRANCH }} build_bin
+        cd build_bin/
+        if [ ! -d ${{ env.DEVICE_NAME }} ]; then mkdir ${{ env.DEVICE_NAME }} 
+        fi 
+        git add ${{ env.DEVICE_NAME }}
+        rm -rf /workdir/openwrt/build_bin/
+        ln -sf /workdir/build_bin/${{ env.DEVICE_NAME }} /workdir/openwrt/bin
       
     - name: Clean cache
       working-directory: /workdir
-      if: github.event.inputs.staging_dir == '3'
+      if: github.event.inputs.use_build_cache == '3'
       run: |
         cd staging_dir/
         find ./ -type f  | grep -v '^\./\.'| xargs rm -rf
-        ls -l
         cd ..
         cd build_dir/
         find ./ -type f  | grep -v '^\./\.'| xargs rm -rf
-        ls -l
         
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@v1.0.0
@@ -169,20 +179,6 @@ jobs:
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
         
-    - name: Push download
-      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
-      working-directory: /workdir
-      run: |
-        cd dl 
-        git config --local user.email "yuwenzhen@qq.com"
-        git config --local user.name "RexYu"
-        for file in $(find ./ -type f -size +99M | grep -v '^\./\.'); do git lfs track "$file"; done
-        git pull
-        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
-        git add ./
-        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push
-        
     - name: Compile the firmware
       id: compile
       run: |
@@ -190,6 +186,7 @@ jobs:
         echo -e "$(nproc) thread compile"
         make -j1 V=s
         echo "::set-output name=status::success"
+        
     - name: Check space usage
       if: (!cancelled())
       run: df -hT
@@ -216,8 +213,21 @@ jobs:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
           
+    - name: Push build_bin
+      if: steps.compile.outputs.status == 'success' && (steps.compile.use_build_cache.status == '2'||steps.compile.use_build_cache.status == '3' ) && !cancelled() 
+      working-directory: /workdir
+      run: |
+        cd build_bin 
+        git config --local user.email "yuwenzhen@qq.com"
+        git config --local user.name "RexYu"
+        for file in $(find ./ -type f -size +99M | grep -v '^\./\.'); do git lfs track "$file"; done
+        git pull
+        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}2' > VERSION
+        git add ./
+        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git push
+        
     - name: Push download
-      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       working-directory: /workdir
       run: |
         cd dl 
@@ -231,7 +241,7 @@ jobs:
         git push
         
     - name: Push build_dir
-      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      if: steps.compile.outputs.status == 'success' && (steps.compile.use_build_cache.status == '2'||steps.compile.use_build_cache.status == '3' ) && !cancelled() 
       working-directory: /workdir
       run: |
         cd build_dir
@@ -252,7 +262,7 @@ jobs:
         git push
         
     - name: Push staging_dir
-      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      if: steps.compile.outputs.status == 'success' && (steps.compile.use_build_cache.status == '2'||steps.compile.use_build_cache.status == '3' ) && !cancelled() 
       working-directory: /workdir
       run: |
         cd staging_dir
