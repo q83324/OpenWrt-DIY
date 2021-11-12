@@ -110,7 +110,7 @@ jobs:
           
     - name: Clone staging_dir
       working-directory: /workdir
-      if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2'
+      if: github.event.inputs.staging_dir == '1' || github.event.inputs.staging_dir  == '2' || github.event.inputs.staging_dir  == '3'
       run: |
         git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.STAGEING_BRANCH }} staging_dir
         cd staging_dir/
