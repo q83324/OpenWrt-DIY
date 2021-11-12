@@ -19,7 +19,7 @@ on:
         required: false
         default: 'false'
       staging_dir:
-        description: 'staging_dir to Actions 0:disable,1:use not upload,2:use and upload'
+        description: 'staging_dir to Actions 0:disable,1:use not upload,2:use and upload,3:not use and upload'
         required: false
         default: '2'
 
@@ -60,6 +60,7 @@ jobs:
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean
         sudo timedatectl set-timezone "$TZ"
+        sudo git lfs install
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
         
@@ -120,6 +121,13 @@ jobs:
         ln -sf /workdir/staging_dir/${{ env.DEVICE_NAME }} /workdir/openwrt/staging_dir
         ls -l $GITHUB_WORKSPACE/openwrt/staging_dir
       
+    - name: Clean staging_dir
+      working-directory: /workdir
+      if: github.event.inputs.staging_dir == '3'
+      run: |
+        cd staging_dir/
+        find ./ -type f  | grep -v '^\./\.'| xargs rm -rf
+        ls-l
         
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@v1.0.0
@@ -146,7 +154,7 @@ jobs:
         cd dl 
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
-        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
+        for file in $(find ./ -type f -size +99M | grep -v '^\./\.'); do git lfs track "$file"; done
         git pull
         echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
         git add ./
@@ -185,28 +193,7 @@ jobs:
       with:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
-      
-    - name: Clone build
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
-      run: git clone --depth 1 $IO_URL -b $BUILD_BRANCH build
-      
-    - name: Push build
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
-      run: |
-        cd build 
-        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
-        BUILD_PATH=${PWD}
-        cd ../openwrt/bin/targets/**/**/
-        cp -rf ../../../../.config ./${{ env.BUILD_NAME }}.config
-        cd $BUILD_PATH
-        cp -rf ../openwrt/bin/* ./
-        git config --local user.email "yuwenzhen@qq.com"
-        git config --local user.name "RexYu"
-        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
-        git pull
-        git add ./
-        git commit -m 'commit build ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push  -f
+          
     - name: Push download
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       working-directory: /workdir
@@ -214,12 +201,13 @@ jobs:
         cd dl 
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
-        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
+        for file in $(find ./ -type f -size +99M | grep -v '^\./\.'); do git lfs track "$file"; done
         git pull
-        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
+        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}2' > VERSION
         git add ./
         git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push  -f
+        git push
+        
     - name: Push staging_dir
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       working-directory: /workdir
@@ -230,10 +218,9 @@ jobs:
         echo 'ls package'
         ls -l ${{ env.DEVICE_NAME }}/
         echo 'ls package end'
-        
         git config --local user.email "yuwenzhen@qq.com"
         git config --local user.name "RexYu"
-        find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
+        for file in $(find ./ -type f -size +99M | grep -v '^\./\.'); do git lfs track "$file"; done
         free
         git config --global http.postBuffer 7240000000
         git pull
