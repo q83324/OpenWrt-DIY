@@ -58,5 +58,39 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
         sudo git lfs install
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
 
+    - name: Clone download
+      working-directory: /workdir
+      run: |
+        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.DL_BRANCH }} download
+        cd staging_dir/
+        if [ ! -d ${{ env.DEVICE_NAME }} ]; then mkdir ${{ env.DEVICE_NAME }} 
+        fi 
+        git add ${{ env.DEVICE_NAME }}
+        rm -rf /workdir/openwrt/staging_dir/
+        ln -sf /workdir/download /workdir/openwrt/dl
+       
+    - name: Download package
+      id: package
+      run: |
+        cd openwrt
+        dd if=/dev/zero of=empty${{ env.FILE_DATE }} bs=1M count=0 seek=120  
+        dd if=/dev/zero of=empty2${{ env.FILE_DATE }} bs=1M count=0 seek=1 
+        ls -l dl/
         
+    - name: Push download
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      working-directory: /workdir
+      run: |
+        cd dl 
+        git config --local user.email "yuwenzhen@qq.com"
+        git config --local user.name "RexYu"
+        #find ./ -type f -size +99M | grep -v '^\./\.'| xargs rm -rf
+        for file in $(find ./ -type f -size +99M | grep -v '^\./\.'); do git lfs track "$file"; done
+
+        git pull
+        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
+        git add ./
+        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
+        git push
