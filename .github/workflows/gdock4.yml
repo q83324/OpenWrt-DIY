@@ -232,7 +232,7 @@ jobs:
         free
         git config --global http.postBuffer 7240000000
         git pull
-        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
+        echo '2${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
         git add ./
         git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
