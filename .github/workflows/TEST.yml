@@ -68,6 +68,7 @@ jobs:
         ln -sf /workdir/download /workdir/openwrt/dl
        
     - name: Download package
+      working-directory: /workdir
       id: package
       run: |
         cd openwrt
