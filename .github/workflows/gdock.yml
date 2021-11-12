@@ -127,7 +127,7 @@ jobs:
       run: |
         cd staging_dir/
         find ./ -type f  | grep -v '^\./\.'| xargs rm -rf
-        ls-l
+        ls -l
         
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@v1.0.0
