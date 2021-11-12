@@ -59,16 +59,12 @@ jobs:
         sudo chown $USER:$GROUPS /workdir
         sudo git lfs install
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+        mkdir /workdir/openwrt
 
     - name: Clone download
       working-directory: /workdir
       run: |
         git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.DL_BRANCH }} download
-        cd download/
-        if [ ! -d ${{ env.DEVICE_NAME }} ]; then mkdir ${{ env.DEVICE_NAME }} 
-        fi 
-        git add ${{ env.DEVICE_NAME }}
-        rm -rf /workdir/openwrt/dl/
         ln -sf /workdir/download /workdir/openwrt/dl
        
     - name: Download package
