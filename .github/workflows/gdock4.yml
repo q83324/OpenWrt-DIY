@@ -26,7 +26,7 @@ on:
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
-  IO_URL: https://rexyu:${{ secrets.ACCESS_TOKEN}}@github.com/openwrtrouter/openwrtrouter.github.io
+  IO_URL: https://devdevcn:${{ secrets.ACCESS_TOKEN}}@github.com/DevDevCN/devdevcn.github.io.git
   DL_BRANCH: download
   BUILD_BRANCH: build
   STAGEING_BRANCH: staging_dir
@@ -116,8 +116,9 @@ jobs:
         if [ ! -d ${{ env.DEVICE_NAME }} ]; then mkdir ${{ env.DEVICE_NAME }} 
         fi 
         git add ${{ env.DEVICE_NAME }}
-        ln -sf ${{ env.DEVICE_NAME }} /workdir/openwrt/staging_dir
-        ls $GITHUB_WORKSPACE/openwrt/staging_dir
+        rm -rf /workdir/openwrt/staging_dir/
+        ln -sf /workdir/staging_dir/${{ env.DEVICE_NAME }} /workdir/openwrt/staging_dir
+        ls -l $GITHUB_WORKSPACE/openwrt/staging_dir
       
         
     - name: SSH connection to Actions
@@ -132,7 +133,7 @@ jobs:
       id: package
       run: |
         cd openwrt
-        ls dl/
+        ls -l dl/
         make defconfig
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
@@ -225,9 +226,9 @@ jobs:
       run: |
         cd staging_dir
         df -hT $PWD
-        ls
+        ls -l 
         echo 'ls package'
-        ls ${{ env.DEVICE_NAME }}
+        ls -l ${{ env.DEVICE_NAME }}/
         echo 'ls package end'
         
         git config --local user.email "yuwenzhen@qq.com"
@@ -241,23 +242,6 @@ jobs:
         git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
         git push
         
-    - name: Push staging_dir2
-      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
-      working-directory: /workdir
-      run: |
-        cd staging_dir/
-        $PWD
-        df -hT $PWD
-        cd ${{ env.DEVICE_NAME }}/
-        git config --local user.email "yuwenzhen@qq.com"
-        git config --local user.name "RexYu"
-        free
-        git config --global http.postBuffer 7240000000
-        git pull
-        echo '${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > VERSION
-        git add ./
-        git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}'
-        git push
     - name: Upload firmware to cowtransfer
       id: cowtransfer
       if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
