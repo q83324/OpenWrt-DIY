@@ -69,12 +69,6 @@ jobs:
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         
-    - name: Clone download
-      working-directory: /workdir
-      run: |
-        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.DL_BRANCH }} dl
-        ln -sf /workdir/dl $GITHUB_WORKSPACE/openwrt/dl
-        
         
     - name: Load custom feeds
       run: |
