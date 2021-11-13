@@ -8,7 +8,7 @@
 # Description: Build OpenWrt using GitHub Actions
 #
 
-name: Build G-Dock DL2 OpenWrt
+name: Build G-Dock Simple OpenWrt
 
 on:
   repository_dispatch:
@@ -18,23 +18,18 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-      use_build_cache:
-        description: 'build_cache to Actions 0:disable,1:use not upload,2:use and upload,3:not use and upload'
-        required: false
-        default: '2'
 
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
   IO_URL: https://wzlcm:${{ secrets.ACCESS_TOKEN}}@github.com/wzlcm/wzlcm.github.io.git
   DL_BRANCH: download
-  BIN_BRANCH: build
   BUILD_BRANCH: build_dir
   STAGEING_BRANCH: staging_dir
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: config/Qualcomm/gdock.config
-  DIY_P1_SH: scripts/diy-part1.sh
-  DIY_P2_SH: scripts/diy-part2.sh
+  DIY_P1_SH: scripts/diy-part1-1.sh
+  DIY_P2_SH: scripts/diy-part2-simple.sh
   UPLOAD_BIN_DIR: true
   UPLOAD_DOWNLOAD: true
   UPLOAD_FIRMWARE: true
@@ -102,65 +97,16 @@ jobs:
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
         cd $GITHUB_WORKSPACE/openwrt
+        echo '.config info'
         cat .config
         
-        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/CONFIG_TARGET_(.*)_DEVICE_(.*)=y/\1/' > TARGET_NAME || grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/CONFIG_TARGET_(.*)_generic_DEVICE_(.*)=y/\1/' > TARGET_NAME
-        [ -s TARGET_NAME ] && echo "TARGET_NAME=$(cat TARGET_NAME)" >> $GITHUB_ENV
-        
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
-        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=$(cat DEVICE_NAME)" >> $GITHUB_ENV
-        
-        echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
         grep 'DISTRIB_REVISION=' package/lean/default-settings/files/zzz-default-settings  | awk -v head="DISTRIB_REVISION='" -v tail="'\"" '{print substr($0, index($0,head)+length(head),index($0,tail)-index($0,head)-length(head))}' >DISTRIB_REVISION
         [ -s DISTRIB_REVISION ] && echo "DISTRIB_REVISION= $(cat DISTRIB_REVISION)" >> $GITHUB_ENV
         
           
-    - name: Clone build_dir
-      working-directory: /workdir
-      if: github.event.inputs.use_build_cache == '1' || github.event.inputs.use_build_cache  == '2' || github.event.inputs.use_build_cache  == '3'
-      run: |
-        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.BUILD_BRANCH }} build_dir
-        cd build_dir/
-        if [ ! -d ${{ env.TARGET_NAME }} ]; then mkdir ${{ env.TARGET_NAME }} 
-        fi 
-        git add ${{ env.TARGET_NAME }}
-        rm -rf /workdir/openwrt/build_dir/
-        ln -sf /workdir/build_dir/${{ env.TARGET_NAME }} /workdir/openwrt/build_dir
-        
-    - name: Clone staging_dir
-      working-directory: /workdir
-      if: github.event.inputs.use_build_cache == '1' || github.event.inputs.use_build_cache  == '2' || github.event.inputs.use_build_cache  == '3'
-      run: |
-        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.STAGEING_BRANCH }} staging_dir
-        cd staging_dir/
-        if [ ! -d ${{ env.TARGET_NAME }} ]; then mkdir ${{ env.TARGET_NAME }} 
-        fi 
-        git add ${{ env.TARGET_NAME }}
-        rm -rf /workdir/openwrt/staging_dir/
-        ln -sf /workdir/staging_dir/${{ env.TARGET_NAME }} /workdir/openwrt/staging_dir
-      
-         
-    - name: Clone build_bin
-      working-directory: /workdir
-      if: github.event.inputs.use_build_cache == '1' || github.event.inputs.use_build_cache  == '2' || github.event.inputs.use_build_cache  == '3'
-      run: |
-        git clone --depth 1 ${{ env.IO_URL }} -b ${{ env.BIN_BRANCH }} build_bin
-        cd build_bin/
-        if [ ! -d ${{ env.TARGET_NAME }} ]; then mkdir ${{ env.TARGET_NAME }} 
-        fi 
-        git add ${{ env.TARGET_NAME }}
-        rm -rf /workdir/openwrt/build_bin/
-        ln -sf /workdir/build_bin/${{ env.TARGET_NAME }} /workdir/openwrt/bin
-      
-    - name: Clean cache
-      working-directory: /workdir
-      if: github.event.inputs.use_build_cache == '3'
-      run: |
-        cd staging_dir/${{ env.TARGET_NAME }}
-        find ./ -type f  | grep -v '^\./\.'| xargs rm -rf
-        cd ..
-        cd build_dir/${{ env.TARGET_NAME }}
-        find ./ -type f  | grep -v '^\./\.'| xargs rm -rf
         
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@v1.0.0
@@ -170,17 +116,6 @@ jobs:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
         
-    - name: Download package
-      id: package
-      run: |
-        cd openwrt
-        ls -l dl/
-        make defconfig
-        echo '.config info'
-        cat .config
-        make download -j8
-        find dl -size -1024c -exec ls -l {} \;
-        find dl -size -1024c -exec rm -f {} \;
         
     - name: Compile the firmware
       id: compile
@@ -189,7 +124,6 @@ jobs:
         echo -e "$(nproc) thread compile"
         make -j1 V=s
         echo "::set-output name=status::success"
-        
     - name: Check space usage
       if: (!cancelled())
       run: df -hT
@@ -198,7 +132,7 @@ jobs:
       uses: actions/upload-artifact@main
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
       with:
-        name: OpenWrt_bin_${{ env.DEVICE_NAME }}_${{ env.DISTRIB_REVISION }}_${{ env.FILE_DATE }}
+        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
         path: openwrt/bin
 
     - name: Organize files
@@ -213,73 +147,9 @@ jobs:
       uses: actions/upload-artifact@main
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
-        name: OpenWrt_firmware_${{ env.DEVICE_NAME }}_${{ env.DISTRIB_REVISION }}_${{ env.FILE_DATE }}
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
           
-    - name: Push build_bin
-      if: steps.compile.outputs.status == 'success' && (steps.compile.use_build_cache.status == '2'||steps.compile.use_build_cache.status == '3' ) && !cancelled() 
-      working-directory: /workdir
-      run: |
-        cd build_bin 
-        git config --local user.email "yuwenzhen@qq.com"
-        git config --local user.name "RexYu"
-        for file in $(find ./ -type f -size +99M | grep -v '^\./\.'); do git lfs track "$file"; done
-        git pull
-        echo '${{ env.DEVICE_NAME }}_${{ env.DISTRIB_REVISION }}_${{ env.FILE_DATE }}2' > VERSION
-        git add ./
-        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}_${{ env.DISTRIB_REVISION }}_${{ env.FILE_DATE }}'
-        git push
-        
-    - name: Push download
-      working-directory: /workdir
-      run: |
-        cd dl 
-        git config --local user.email "yuwenzhen@qq.com"
-        git config --local user.name "RexYu"
-        for file in $(find ./ -type f -size +99M | grep -v '^\./\.'); do git lfs track "$file"; done
-        git pull
-        echo '${{ env.DEVICE_NAME }}_${{ env.DISTRIB_REVISION }}_${{ env.FILE_DATE }}2' > VERSION
-        git add ./
-        git commit -m ' commit download packages ${{ env.DEVICE_NAME }}_${{ env.DISTRIB_REVISION }}_${{ env.FILE_DATE }}'
-        git push
-        
-    - name: Push build_dir
-      if: steps.compile.outputs.status == 'success' && (steps.compile.use_build_cache.status == '2'||steps.compile.use_build_cache.status == '3' ) && !cancelled() 
-      working-directory: /workdir
-      run: |
-        cd build_dir
-        df -hT $PWD
-        git config --local user.email "yuwenzhen@qq.com"
-        git config --local user.name "RexYu"
-        for file in $(find ./ -type f -size +99M | grep -v '^\./\.'); do git lfs track "$file"; done
-        free
-        git config --global http.postBuffer 7240000000
-        git pull
-        echo '2${{ env.DEVICE_NAME }}_${{ env.DISTRIB_REVISION }}_${{ env.FILE_DATE }}' > ${{ env.TARGET_NAME }}/VERSION
-        git add ./
-        git commit -m ' commit  build_dir  ${{ env.DEVICE_NAME }}_${{ env.DISTRIB_REVISION }}_${{ env.FILE_DATE }}'
-        git push
-        
-    - name: Push staging_dir
-      if: steps.compile.outputs.status == 'success' && (steps.compile.use_build_cache.status == '2'||steps.compile.use_build_cache.status == '3' ) && !cancelled() 
-      working-directory: /workdir
-      run: |
-        cd staging_dir
-        df -hT $PWD
-        ls -l 
-        echo 'ls package'
-        ls -l ${{ env.DEVICE_NAME }}/
-        echo 'ls package end'
-        git config --local user.email "yuwenzhen@qq.com"
-        git config --local user.name "RexYu"
-        for file in $(find ./ -type f -size +99M | grep -v '^\./\.'); do git lfs track "$file"; done
-        free
-        git config --global http.postBuffer 7240000000
-        git pull
-        echo '2${{ env.DEVICE_NAME }}${{ env.DISTRIB_REVISION }}${{ env.FILE_DATE }}' > ${{ env.TARGET_NAME }}/VERSION
-        git add ./
-        git commit -m ' commit  staging_dir  ${{ env.DEVICE_NAME }}_${{ env.DISTRIB_REVISION }}_${{ env.FILE_DATE }}'
-        git push
         
     - name: Upload firmware to cowtransfer
       id: cowtransfer
